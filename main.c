@@ -57,9 +57,9 @@ void threaded_mat_mult_per_element(double**, double**, double**, int, int, int);
 
 
 int main() {
-    int mat1_rows, mat1_cols, mat2_cols;
+    int mat1_rows, mat1_cols, mat2_cols, type;
     printf("Enter 2 Matrix Dimentions: \n");
-    scanf("%d %d %d", &mat1_rows, &mat1_cols, &mat2_cols);
+    scanf("%d %d %d %d", &mat1_rows, &mat1_cols, &mat2_cols, &type);
 
     // initialize matrices including the space where the result matrix will be stored
     double** mat1 = allocate_matrix(mat1_rows, mat1_cols);
@@ -73,7 +73,22 @@ int main() {
     /** multiply **/
     // non_threaded_mat_mult(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
     // threaded_mat_mult_per_row(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
-    threaded_mat_mult_per_element(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+    // threaded_mat_mult_per_element(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+
+    switch(type) {
+        case 0:
+            non_threaded_mat_mult(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+            break;
+        case 1:
+            threaded_mat_mult_per_row(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+            break;
+        case 2:
+            threaded_mat_mult_per_element(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+            break;
+        default:
+            non_threaded_mat_mult(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
+    }
+
     print_matrix(result_mat, fopen("../tests/inputs/o.txt", "w"), mat1_rows, mat2_cols);
     return 0;
 }
