@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
+#define MAXTHREADS 30000
 
 /**
  * Dynamically Allocates matrix with rows and cols count as in inputs
@@ -67,8 +68,8 @@ int main() {
     double** result_mat = allocate_matrix(mat1_rows, mat2_cols);
 
     // read the input matrices
-    read_matrix(mat1, fopen("../tests/inputs/a.txt", "r"), mat1_rows, mat1_cols);
-    read_matrix(mat2, fopen("../tests/inputs/b.txt", "r"), mat1_cols, mat2_cols);
+    read_matrix(mat1, fopen("../tests/inputs/samples/A2.txt", "r"), mat1_rows, mat1_cols);
+    read_matrix(mat2, fopen("../tests/inputs/samples/B2.txt", "r"), mat1_cols, mat2_cols);
 
     /** multiply **/
     // non_threaded_mat_mult(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
@@ -89,7 +90,7 @@ int main() {
             non_threaded_mat_mult(mat1, mat2, result_mat, mat1_rows, mat1_cols, mat2_cols);
     }
 
-    print_matrix(result_mat, fopen("../tests/inputs/o.txt", "w"), mat1_rows, mat2_cols);
+    print_matrix(result_mat, fopen("../tests/inputs/samples/o2.txt", "w"), mat1_rows, mat2_cols);
     return 0;
 }
 
@@ -192,17 +193,27 @@ void threaded_mat_mult_per_element(double** mat1_ptr, double** mat2_ptr, double*
     double* mat1_row_ptr;
     // double cell_value;
 
+
+    // if the no of element > MAXTHREADS allocate only MAXTHREADS size
+    long initial_size;
+    if (mat1_rows * mat2_cols > MAXTHREADS) {
+        initial_size = MAXTHREADS;
+    } else {
+        initial_size = mat1_rows * mat2_cols;
+    }
+
     // initialize threads pointers array
-    pthread_t** col_threads = malloc(sizeof(pthread_t*) * (mat1_rows * mat2_cols + 1));
-    CalcElementArgs** col_threads_args = malloc(sizeof(CalcElementArgs*) * (mat1_rows * mat2_cols + 1));
-    *(col_threads + (mat1_rows * mat2_cols)) = NULL;
-    *(col_threads_args + (mat1_rows * mat2_cols)) = NULL;
+    pthread_t** col_threads = malloc(sizeof(pthread_t*) * initial_size);
+    CalcElementArgs** col_threads_args = malloc(sizeof(CalcElementArgs*) * initial_size);
+//    *(col_threads + (mat1_rows * mat2_cols)) = NULL;
+//    *(col_threads_args + (mat1_rows * mat2_cols)) = NULL;
 
     int counter = 0, status;
     CalcElementArgs* current_args;
 
     pthread_attr_t attr;
     pthread_attr_init(&attr);
+
 
     // iterate over each row of the first matrix
     for (int i = 0; i < mat1_rows; i++) {
@@ -224,18 +235,30 @@ void threaded_mat_mult_per_element(double** mat1_ptr, double** mat2_ptr, double*
             // create a thread to calculate this element
             col_threads[counter] = malloc(sizeof(pthread_t));
             status = pthread_create(col_threads[counter], &attr, calc_element_threaded, col_threads_args[counter]);
+            
             if (status) {
                 fprintf(stderr,"Error - pthread_create() return code: %d\n", status);
                 exit(EXIT_FAILURE);
             }
             counter++;
             
+            if (counter >= MAXTHREADS) {
+                for (int x = 0; x < MAXTHREADS; x++) {
+                    pthread_detach(*col_threads[x]);
+                    pthread_join(*col_threads[x], NULL);
+                }
+                counter = 0;
+            }
+
             // calc_element(mat1_row_ptr, mat2_ptr, out_mat_ptr, i, mat1_cols, j);
         }
     }
 
-    for (counter = 0; counter < (mat1_rows * mat2_cols); counter++) {
-        pthread_join(*col_threads[counter], NULL);
+//    for (counter = 0; counter < (mat1_rows * mat2_cols); counter++) {
+//        pthread_join(*col_threads[counter], NULL);
+//    }
+    for (int i = 0; i < counter; i++) {
+        pthread_join(*col_threads[i], NULL);
     }
 
     // TODO: Free the args structure
