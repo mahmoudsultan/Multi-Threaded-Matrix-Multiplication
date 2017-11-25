@@ -244,7 +244,7 @@ void threaded_mat_mult_per_element(double** mat1_ptr, double** mat2_ptr, double*
             
             if (counter >= MAXTHREADS) {
                 for (int x = 0; x < MAXTHREADS; x++) {
-                    pthread_detach(*col_threads[x]);
+                    // pthread_detach(*col_threads[x]);
                     pthread_join(*col_threads[x], NULL);
                 }
                 counter = 0;
